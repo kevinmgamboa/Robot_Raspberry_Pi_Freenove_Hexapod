@@ -25,6 +25,11 @@ class Client:
         self.fece_recognition_flag = False
         self.image = ''
 
+    # Initialize model fro object detection
+    def init_object_detector(self):
+        # Load & initialize model
+        detector = ObjectDetectorLite(model_path=model_path, label_path=label_path)
+
     # Add the new function here.
     def tflite_object_detection(self, image):
         """
@@ -127,7 +132,6 @@ class Client:
                 print(e)
 
     def receive_data(self):
-        data = ""
         data = self.client_socket1.recv(1024).decode('utf-8')
         return data
 
