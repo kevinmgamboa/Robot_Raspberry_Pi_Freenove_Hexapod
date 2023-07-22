@@ -1,7 +1,7 @@
 """Model inference module"""
 import numpy as np
 from tensorflow.lite.python.interpreter import Interpreter
-from utils import *
+from myai.utils import *
 
 
 class ObjectDetectorLite:

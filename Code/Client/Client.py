@@ -1,28 +1,29 @@
 # -*- coding: utf-8 -*-
 import io
-# import math
-# import copy
+import math
+import copy
 import socket
 import struct
-# import threading
+import threading
 from PID import *
 from Face import *
 import numpy as np
-# from Thread import *
-# import multiprocessing
+from Thread import *
+import multiprocessing
 from PIL import Image, ImageDraw
-# from Command import COMMAND as cmd
-# import tensorflow as tf
+from Command import COMMAND as cmd
+import tensorflow as tf
 
 from myai.detector import ObjectDetectorLite
 from myai.visualization_utils import draw_bounding_boxes_on_image_array
 from myai.utils import reshape_image
+import cv2
 
 
 class Client:
     def __init__(self):
         # initializes model object detection
-        self.detector = ObjectDetectorLite(model_path='detect.tflite', label_path='labelmap.txt')
+        self.detector = ObjectDetectorLite(model_path='myai/detect.tflite', label_path='myai/labelmap.txt')
         self.face = Face()
         self.pid = Incremental_PID(1, 0, 0.0025)
         self.tcp_flag = False
@@ -41,7 +42,8 @@ class Client:
         """
 
         # reshapes image to lower dimension
-        image = reshape_image(ori_image)
+        image = cv2.resize(ori_image, (300, 300))
+        # image = reshape_image(ori_image)
         # passes image into model
         boxes, scores, classes = self.detector.detect(image, confidence)
         # draw box into image
@@ -94,14 +96,14 @@ class Client:
                         # ----------------------------------------------------------------------------------------------
                         # gets the image that appears in video
                         self.image = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-                        # self.image is an ndarray (300,400,3)
-                        # image received by the model is (300, 300, 3)
                         # ----------------------------------------------------------------------------------------------
-                        # # Add a call to the new function here.
-                        self.tflite_object_detection(self.image)
-                        #
-                        # # Process or display the results as needed.
-                        # self.process_detections(boxes, class_labels, scores, num)  # You'll need to implement this.
+                        # reshapes image to lower dimension
+                        image = cv2.resize(self.image, (300, 300))
+                        # passes image into model
+                        boxes, scores, classes = self.detector.detect(image, 0.5)
+                        # draw box into image
+                        if len(boxes) > 0:
+                            draw_bounding_boxes_on_image_array(self.image, boxes, display_str_list=classes)
                         # ----------------------------------------------------------------------------------------------
                         if self.fece_id == False and self.fece_recognition_flag:
                             self.face.face_detect(self.image)

@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from Client import *
 from Calibration import *
+from Code.Client.myai import *
 
 
 class MyWindow(QMainWindow, Ui_client):
