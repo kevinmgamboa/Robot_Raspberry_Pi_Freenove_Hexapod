@@ -1,22 +1,28 @@
 # -*- coding: utf-8 -*-
 import io
-import math
-import copy
+# import math
+# import copy
 import socket
 import struct
-import threading
+# import threading
 from PID import *
 from Face import *
 import numpy as np
-from Thread import *
-import multiprocessing
+# from Thread import *
+# import multiprocessing
 from PIL import Image, ImageDraw
-from Command import COMMAND as cmd
-import tensorflow as tf
+# from Command import COMMAND as cmd
+# import tensorflow as tf
+
+from myai.detector import ObjectDetectorLite
+from myai.visualization_utils import draw_bounding_boxes_on_image_array
+from myai.utils import reshape_image
 
 
 class Client:
     def __init__(self):
+        # initializes model object detection
+        self.detector = ObjectDetectorLite(model_path='detect.tflite', label_path='labelmap.txt')
         self.face = Face()
         self.pid = Incremental_PID(1, 0, 0.0025)
         self.tcp_flag = False
@@ -25,13 +31,8 @@ class Client:
         self.fece_recognition_flag = False
         self.image = ''
 
-    # Initialize model fro object detection
-    def init_object_detector(self):
-        # Load & initialize model
-        detector = ObjectDetectorLite(model_path=model_path, label_path=label_path)
-
     # Add the new function here.
-    def tflite_object_detection(self, image):
+    def tflite_object_detection(self, ori_image, confidence):
         """
         Steps
         1. Reshapes image to appropriate model input dimension
@@ -39,29 +40,13 @@ class Client:
         3. Takes the output and added it back to the video frame
         """
 
-        # Load TFLite model and allocate tensors.
-        interpreter = tf.lite.Interpreter(model_path="detect.tflite")
-        interpreter.allocate_tensors()
-
-        # Get input and output tensors.
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
-
-        # Preprocess your image or frame here.
-        # This code assumes your model expects an image of a certain size and range.
-        preprocessed_image = self.preprocess(image)  # You'll need to implement this.
-
-        # Run the model's interpreter.
-        interpreter.set_tensor(input_details[0]['index'], preprocessed_image)
-        interpreter.invoke()
-
-        # Extract the output and postprocess it.
-        boxes = interpreter.get_tensor(output_details[0]['index'])
-        class_labels = interpreter.get_tensor(output_details[1]['index'])
-        scores = interpreter.get_tensor(output_details[2]['index'])
-        num = interpreter.get_tensor(output_details[3]['index'])
-
-        return boxes, class_labels, scores, num
+        # reshapes image to lower dimension
+        image = reshape_image(ori_image)
+        # passes image into model
+        boxes, scores, classes = self.detector.detect(image, confidence)
+        # draw box into image
+        if len(boxes) > 0:
+            draw_bounding_boxes_on_image_array(image, boxes, display_str_list=classes)
 
     def turn_on_client(self, ip):
         self.client_socket1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -100,6 +85,7 @@ class Client:
             try:
                 stream_bytes = self.connection.read(4)
                 leng = struct.unpack('<L', stream_bytes[:4])
+                # reads image from robot
                 jpg = self.connection.read(leng[0])
                 if self.is_valid_image_4_bytes(jpg):
                     if self.video_flag:
@@ -108,10 +94,11 @@ class Client:
                         # ----------------------------------------------------------------------------------------------
                         # gets the image that appears in video
                         self.image = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-                        # image is an ndarray (300,400,3)
+                        # self.image is an ndarray (300,400,3)
+                        # image received by the model is (300, 300, 3)
                         # ----------------------------------------------------------------------------------------------
                         # # Add a call to the new function here.
-                        # boxes, class_labels, scores, num = self.tflite_object_detection(self.image)
+                        self.tflite_object_detection(self.image)
                         #
                         # # Process or display the results as needed.
                         # self.process_detections(boxes, class_labels, scores, num)  # You'll need to implement this.
